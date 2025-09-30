@@ -1,0 +1,36 @@
+defaults:
+        - _self_
+        - dataset: example
+
+model_type: 'ConvTransModel'
+
+run:
+    name: 'c-origami-${dataset.name}'
+    save_root: /gpfs/data/abl/home/cather01/tsirigos-dir/corigami-conf/C.Origami-wandb/src/corigami/training/models_output/
+    save_path: &run_dir ${run.save_root}/runs/${logger.wandb.project}/${run.name}/${now:%Y-%m-%d}/${now:%H-%M-%S-%f}
+    mode: 'train'
+    seed: 2077
+
+hydra:
+    run:
+        dir: *run_dir
+
+logger:
+    wandb:
+        mode: 'online'
+        project: 'CORIGAMI-hic'
+
+
+dataloader:
+    batch_size: 4
+    num_workers: 8
+    pin_memory: TRUE
+    prefetch_factor: 1
+    ddp_disabled: TRUE
+
+trainer:
+    max_epochs: 80
+    patience: 80
+    save_top_n: 100
+    num_gpu: 4
+    checkpoint: null

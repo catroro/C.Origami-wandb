@@ -1,7 +1,12 @@
 defaults:
+  - genomic_features:
+          - ctcf
+          - atac
   - _self_
 
 data_root: '/gpfs/data/abl/home/cather01/tsirigos-dir/corigami-conf/data'
 assembly: 'mm10'
 celltype: 'MEF'
+include_sequence: true
+include_genomic_features: true
 name: example

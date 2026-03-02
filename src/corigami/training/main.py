@@ -68,9 +68,21 @@ class TrainModule(pl.LightningModule):
         return self.model(x)
 
     def proc_batch(self, batch):
-        seq, features, mat, start, end, chr_name, chr_idx = batch
-        features = torch.cat([feat.unsqueeze(2) for feat in features], dim = 2)
-        inputs = torch.cat([seq, features], dim = 2)
+        if self.args.dataset.include_sequence:
+                if self.args.dataset.include_genomic_features:
+                    seq, features, mat, start, end, chr_name, chr_idx = batch
+                    features = torch.cat([feat.unsqueeze(2) for feat in features], dim = 2)
+                    inputs = torch.cat([seq, features], dim = 2)
+                else:
+                    seq, mat, start, end, chr_name, chr_idx = batch
+                    inputs = seq
+        else:
+            if self.args.dataset.include_genomic_features:
+                features, mat, start, end, chr_name, chr_idx = batch
+                features = torch.cat([feat.unsqueeze(2) for feat in features], dim = 2)
+                inputs = features
+            else: raise Exception('Include at least one of sequence or features')
+
         mat = mat.float()
         return inputs, mat
     
@@ -167,16 +179,12 @@ class TrainModule(pl.LightningModule):
     def get_dataset(self, args, mode):
 
         celltype_root = f'{args.dataset.data_root}/{args.dataset.assembly}/{args.dataset.celltype}'
-        genomic_features = {'ctcf_log2fc' : {'file_name' : 'ctcf_log2fc.bw',
-                                             'norm' : None },
-                            'atac' : {'file_name' : 'atac.bw',
-                                             'norm' : 'log' }}
         dataset = genome_dataset.GenomeDataset(celltype_root, 
                                 args.dataset.assembly,
-                                genomic_features, 
+                                args.dataset.genomic_features, 
                                 mode = mode,
-                                include_sequence = True,
-                                include_genomic_features = True)
+                                include_sequence = args.dataset.include_sequence,
+                                include_genomic_features = args.dataset.include_genomic_features)
 
         # Record length for printing validation image
         if mode == 'val':
@@ -215,8 +223,10 @@ class TrainModule(pl.LightningModule):
 
     def get_model(self, args):
         model_name =  args.model_type
-        num_genomic_features = 2
+        num_genomic_features = len(args.dataset.genomic_features)
         ModelClass = getattr(corigami_models, model_name)
+        if not args.dataset.include_genomic_features: # Features only model
+            num_genomic_features = 2
         model = ModelClass(num_genomic_features, mid_hidden = 256)
         return model
 
